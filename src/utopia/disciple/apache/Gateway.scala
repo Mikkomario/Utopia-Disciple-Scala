@@ -36,6 +36,11 @@ import utopia.disciple.http.BufferedResponse
 import scala.concurrent.Promise
 import utopia.disciple.http.BufferedResponse
 import utopia.disciple.http.BufferedResponse
+import utopia.flow.datastructure.immutable.Model
+import utopia.flow.datastructure.immutable.Constant
+import org.apache.http.message.BasicNameValuePair
+import org.apache.http.Consts
+import org.apache.http.client.entity.UrlEncodedFormEntity
 
 
 /**
@@ -63,6 +68,7 @@ object Gateway
         try
         {
             val base = makeRequestBase(request.method, request.requestUri)
+            // makeParametersEntity(request.params).foreach(base.setEntity)
             
             val response = client.execute(base)
             try
@@ -108,12 +114,24 @@ object Gateway
     
 	private def makeRequestBase(method: Method, uri: String) = 
 	{
+	    // TODO: Put and post must be handled separately (HttpEntityEnclosingRequestBase, add entity)
 	    method match 
 	    {
 	        case Method.Get => new HttpGet(uri);
 	        case Method.Post => new HttpPost(uri)
 	        case Method.Put => new HttpPut(uri)
 	        case Method.Delete => new HttpDelete(uri)
+	    }
+	}
+	
+	private def makeParametersEntity(params: Model[Constant]) = 
+	{
+	    if (params.isEmpty)
+	        None
+	    else
+	    {
+	        val paramsList = params.attributes.map(c => new BasicNameValuePair(c.name, c.value.stringOr()))
+	        Some(new UrlEncodedFormEntity(paramsList.asJava, Consts.UTF_8))
 	    }
 	}
 	

@@ -47,5 +47,5 @@ trait Response
     /**
      * Whether the response is empty (no body)
      */
-    def isEmpty = contentLength == 0
+    def isEmpty = contentLength == 0 && !headers.isChunked
 }
