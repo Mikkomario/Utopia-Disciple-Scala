@@ -7,7 +7,11 @@
 	<classpathentry kind="lib" path="/Utopia_Flow_Rebuild/bin" sourcepath="/Utopia_Flow_Rebuild/src"/>
 	<classpathentry kind="lib" path="lib/commons-codec-1.10.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.2.jar"/>
-	<classpathentry kind="lib" path="lib/httpclient-4.5.5.jar"/>
+	<classpathentry kind="lib" path="lib/httpclient-4.5.5.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="https://hc.apache.org/httpcomponents-client-ga/httpclient/apidocs/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="lib/httpcore-4.4.9.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

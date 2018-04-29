@@ -1,6 +1,7 @@
 package utopia.disciple.apache
 
 import scala.collection.JavaConverters._
+import utopia.access.http.Method._
 
 import utopia.access.http.Method
 import org.apache.http.client.methods.HttpGet
@@ -41,6 +42,8 @@ import utopia.flow.datastructure.immutable.Constant
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.Consts
 import org.apache.http.client.entity.UrlEncodedFormEntity
+import org.apache.http.HttpEntity
+import org.apache.http.client.utils.URIBuilder
 
 
 /**
@@ -67,7 +70,8 @@ object Gateway
         val client = HttpClients.createDefault()
         try
         {
-            val base = makeRequestBase(request.method, request.requestUri)
+            // TODO: Handle request body too
+            val base = makeRequestBase(request.method, request.requestUri, request.params)
             // makeParametersEntity(request.params).foreach(base.setEntity)
             
             val response = client.execute(base)
@@ -112,16 +116,39 @@ object Gateway
         response.future
     }
     
-	private def makeRequestBase(method: Method, uri: String) = 
+    // Adds parameters and body to the request base. No headers are added at this point
+	private def makeRequestBase(method: Method, baseUri: String, params: Model[Constant] = Model.empty, 
+	        body: Option[HttpEntity] = None) = 
 	{
-	    // TODO: Put and post must be handled separately (HttpEntityEnclosingRequestBase, add entity)
-	    method match 
+	    if (method == Get || method == Delete)
 	    {
-	        case Method.Get => new HttpGet(uri);
-	        case Method.Post => new HttpPost(uri)
-	        case Method.Put => new HttpPut(uri)
-	        case Method.Delete => new HttpDelete(uri)
+	        // Adds the parameters to uri, no body is supported
+	        val uri = makeUriWithParams(baseUri, params)
+	        if (method == Get) new HttpGet(uri) else new HttpDelete(uri)
 	    }
+	    else if (body.isEmpty)
+	    {
+	        // If there is no body, adds the parameters as a body entity instead
+	        val base = if (method == Post) new HttpPost(baseUri) else new HttpPut(baseUri)
+	        makeParametersEntity(params).foreach(base.setEntity)
+	        base
+	    }
+	    else
+	    {
+	        // If both a body and parameters were provided, adds params to uri
+	        val uri = makeUriWithParams(baseUri, params)
+	        val base = if (method == Post) new HttpPost(uri) else new HttpPut(uri)
+	        base.setEntity(body.get)
+	        base
+	    }
+	}
+	
+	// Adds parameter values in JSON format to request uri, returns combined uri
+	private def makeUriWithParams(baseUri: String, params: Model[Constant]) = 
+	{
+	    val builder = new URIBuilder(baseUri)
+	    params.attributes.foreach(a => builder.addParameter(a.name, a.value.toJSON))
+	    builder.build()
 	}
 	
 	private def makeParametersEntity(params: Model[Constant]) = 
