@@ -3,6 +3,9 @@ package utopia.disciple.apache
 import scala.collection.JavaConverters._
 import utopia.access.http.Method._
 
+import scala.language.implicitConversions
+import scala.language.postfixOps
+
 import utopia.access.http.Method
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
@@ -44,6 +47,10 @@ import org.apache.http.Consts
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.HttpEntity
 import org.apache.http.client.utils.URIBuilder
+import utopia.disciple.http.Body
+import org.apache.http.Header
+import org.apache.http.message.BasicHeader
+import java.io.OutputStream
 
 
 /**
@@ -59,6 +66,9 @@ object Gateway
             BadRequest, Unauthorized, Forbidden, NotFound, MethodNotAllowed, 
             InternalServerError, NotImplemented, ServiceUnavailable);
     
+    
+    // OTHER METHODS    ----------------------
+    
     /**
      * Performs a synchronous request over a HTTP connection, calling the provided function 
      * when a response is received
@@ -70,10 +80,14 @@ object Gateway
         val client = HttpClients.createDefault()
         try
         {
-            // TODO: Handle request body too
-            val base = makeRequestBase(request.method, request.requestUri, request.params)
-            // makeParametersEntity(request.params).foreach(base.setEntity)
+            // Makes the base request (uri + params + body)
+            val base = makeRequestBase(request.method, request.requestUri, request.params, 
+                    request.body);
             
+            // Adds the headers
+            request.headers.fields.foreach {case (key, value) => base.addHeader(key, value)}
+            
+            // Performs the request and consumes any response
             val response = client.execute(base)
             try
             {
@@ -90,6 +104,7 @@ object Gateway
         }
         finally
         {
+            // Response and client are always closed
             client.close()
         }
     }
@@ -171,5 +186,43 @@ object Gateway
 	}
 	
 	private def statusForCode(code: Int) = _introducedStatuses.find(
-	        _.code == code).getOrElse(new Status("Other", code))
+	        _.code == code).getOrElse(new Status("Other", code));
+	
+	
+	// IMPLICIT CASTS    ------------------------
+	
+	private implicit def convertOption[T](option: Option[T])
+	        (implicit f: T => HttpEntity): Option[HttpEntity] = option.map(f)
+	
+	private implicit class EntityBody(val b: Body) extends HttpEntity
+	{
+	    def consumeContent() = 
+	    {
+	        b.stream.foreach(input => 
+	        {
+    	        val bytes = new Array[Byte](1024) //1024 bytes - Buffer size
+                Iterator
+                .continually (input.read(bytes))
+                .takeWhile (-1 !=)
+	        })
+	    }
+	    
+        def getContent() = b.stream.getOrElse(null)
+        
+        def getContentEncoding() = b.contentEncoding.map(
+                new BasicHeader("Content-Encoding", _)).getOrElse(null);
+        
+        def getContentLength() = b.contentLength.getOrElse(-1)
+        
+        def getContentType() = new BasicHeader("Content-Type", 
+                b.contentType.toString() + b.charset.map(_.name()).getOrElse(""))
+        
+        def isChunked() = b.chunked
+        
+        def isRepeatable() = b.repeatable
+        
+        def isStreaming() = !b.repeatable
+        
+        def writeTo(output: OutputStream) = b.writeTo(output).get
+	}
 }

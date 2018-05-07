@@ -58,6 +58,8 @@ trait Body
 	 */
 	def writeTo(output: OutputStream) = 
 	{
+	    // See: https://stackoverflow.com/questions/6927873/
+	    // how-can-i-read-a-file-to-an-inputstream-then-write-it-into-an-outputstream-in-sc
 	    stream.flatMap(input => Try(
 	    {
 	        try
