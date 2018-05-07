@@ -21,14 +21,14 @@ import utopia.flow.datastructure.immutable.Value
  */
 class Request(val requestUri: String, val method: Method = Get, 
         val params: Model[Constant] = Model(Vector()), 
-        val headers: Headers = Headers.currentDateHeaders, val uploads: Map[String, FileUpload] = HashMap())
+        val headers: Headers = Headers.currentDateHeaders, val body: Option[Body] = None)
 {
     // OPERATORS    --------------------
     
     /**
      * Adds a new parameter to this request
      */
-    def +(parameter: Constant) = new Request(requestUri, method, params + parameter, headers, uploads)
+    def +(parameter: Constant) = new Request(requestUri, method, params + parameter, headers, body)
     
     /**
      * Adds a new parameter to this request
@@ -36,22 +36,10 @@ class Request(val requestUri: String, val method: Method = Get,
     def +(parameter: Tuple2[String, Value]): Request = this + new Constant(parameter._1, parameter._2)
     
     /**
-     * Adds a new file upload to this request
-     */
-    def +(uploadName: String, uploadFile: FileUpload) = new Request(requestUri, method, params, headers, 
-            uploads + (uploadName -> uploadFile))
-    
-    /**
      * Adds multiple new parameters to this request
      */
     def ++(params: template.Model[Constant]) = new Request(requestUri, method, 
-            this.params ++ params, headers, uploads)
-    
-    /**
-     * Adds multiple new file uploads to this request
-     */
-    def ++(uploads: Map[String, FileUpload]) = new Request(requestUri, method, params, headers, 
-            this.uploads ++ uploads)
+            this.params ++ params, headers, body)
     
     
     // OTHER METHODS    ----------------
@@ -60,5 +48,5 @@ class Request(val requestUri: String, val method: Method = Get,
      * Modifies the headers of this request
      */
     def withModifiedHeaders(mod: Headers => Headers) = new Request(requestUri, method, params, 
-            mod(headers), uploads)
+            mod(headers), body)
 }
