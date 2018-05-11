@@ -69,6 +69,9 @@ object Gateway
     
     // OTHER METHODS    ----------------------
     
+    // TODO: Add support for multipart body:
+    // https://stackoverflow.com/questions/2304663/apache-httpclient-making-multipart-form-post
+    
     /**
      * Performs a synchronous request over a HTTP connection, calling the provided function 
      * when a response is received
