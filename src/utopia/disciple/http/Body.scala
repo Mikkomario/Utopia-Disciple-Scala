@@ -1,6 +1,7 @@
 package utopia.disciple.http
 
 import scala.language.postfixOps
+import utopia.flow.util.AutoClose._
 
 import utopia.access.http.ContentType
 import java.nio.charset.Charset
@@ -60,19 +61,12 @@ trait Body
 	{
 	    // See: https://stackoverflow.com/questions/6927873/
 	    // how-can-i-read-a-file-to-an-inputstream-then-write-it-into-an-outputstream-in-sc
-	    stream.flatMap(input => Try(
+	    stream.flatMap(_.tryConsume(input => 
 	    {
-	        try
-	        {
-    	        Iterator 
-                .continually (input.read)
-                .takeWhile (-1 !=)
-                .foreach (output.write)
-	        }
-	        finally
-	        {
-	            input.close()
-	        }
+	        Iterator 
+            .continually (input.read)
+            .takeWhile (-1 !=)
+            .foreach (output.write)
 	    }))
 	}
 }

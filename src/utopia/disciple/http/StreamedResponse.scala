@@ -61,4 +61,13 @@ class StreamedResponse(override val status: Status, override val headers: Header
     @throws[IllegalStateException]("If this Response has already been consumed")
     def buffered[T](parser: InputStream => T) = new BufferedResponse(consumeIfDefined(parser), 
             status, headers/*, cookies*/)
+    
+    /**
+     * Buffers this response into program memory, parsing the response contents as well
+     * @param parser the function that is used for parsing the response contents
+     * @throws IllegalStateException if the response has already been consumed
+     */
+    @throws[IllegalStateException]("If this Response has already been consumed")
+    def bufferedAndFlattened[T](parser: InputStream => Option[T]) = new BufferedResponse(
+            consumeIfDefined(parser).flatten, status, headers)
 }
