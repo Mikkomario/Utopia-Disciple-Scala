@@ -51,6 +51,7 @@ import utopia.disciple.http.Body
 import org.apache.http.Header
 import org.apache.http.message.BasicHeader
 import java.io.OutputStream
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 
 
 /**
@@ -66,11 +67,32 @@ object Gateway
             BadRequest, Unauthorized, Forbidden, NotFound, MethodNotAllowed, 
             InternalServerError, NotImplemented, ServiceUnavailable);
     
+    // val connectionManager = new PoolingHttpClientConnectionManager()
+    
+    
+    // COMPUTED PROPERTIES    ----------------
+    
+    /*
+     * The maximum number of simultaneous connections to a single route
+     */
+    /*
+    def maxConnectionsPerRoute = connectionManager.getDefaultMaxPerRoute
+    def maxConnectionsPerRoute_=(max: Int) = connectionManager.setDefaultMaxPerRoute(max)
+    */
+    /*
+     * The maximum number of simultaneous connections in total
+     */
+    /*
+    def maxConnectionsTotal = connectionManager.getMaxTotal
+    def maxConnectionsTotal_=(max: Int) = connectionManager.setMaxTotal(max)
+    */
     
     // OTHER METHODS    ----------------------
     
     // TODO: Add support for multipart body:
     // https://stackoverflow.com/questions/2304663/apache-httpclient-making-multipart-form-post
+    
+    // TODO: Reuse client over multiple requests
     
     /**
      * Performs a synchronous request over a HTTP connection, calling the provided function 
