@@ -67,32 +67,26 @@ object Gateway
             BadRequest, Unauthorized, Forbidden, NotFound, MethodNotAllowed, 
             InternalServerError, NotImplemented, ServiceUnavailable);
     
-    // val connectionManager = new PoolingHttpClientConnectionManager()
+    val connectionManager = new PoolingHttpClientConnectionManager()
     
     
     // COMPUTED PROPERTIES    ----------------
     
-    /*
+    /**
      * The maximum number of simultaneous connections to a single route
      */
-    /*
     def maxConnectionsPerRoute = connectionManager.getDefaultMaxPerRoute
     def maxConnectionsPerRoute_=(max: Int) = connectionManager.setDefaultMaxPerRoute(max)
-    */
-    /*
+    /**
      * The maximum number of simultaneous connections in total
      */
-    /*
     def maxConnectionsTotal = connectionManager.getMaxTotal
     def maxConnectionsTotal_=(max: Int) = connectionManager.setMaxTotal(max)
-    */
     
     // OTHER METHODS    ----------------------
     
     // TODO: Add support for multipart body:
     // https://stackoverflow.com/questions/2304663/apache-httpclient-making-multipart-form-post
-    
-    // TODO: Reuse client over multiple requests
     
     /**
      * Performs a synchronous request over a HTTP connection, calling the provided function 
@@ -102,7 +96,9 @@ object Gateway
      */
     def makeRequest(request: Request, consumeResponse: Try[StreamedResponse] => Unit) = 
     {
-        val client = HttpClients.createDefault()
+        //val client = HttpClients.createDefault()
+        val client = HttpClients.custom().setConnectionManager(
+                connectionManager).setConnectionManagerShared(true).build()
         try
         {
             // Makes the base request (uri + params + body)
