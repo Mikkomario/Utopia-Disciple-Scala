@@ -26,7 +26,7 @@ object GatewayTest extends App
 {
     DataType.setup()
     
-    val uri = "http://localhost:9999/TestServer/scala"
+    val uri = "http://localhost:9999/TestServer/echo"
     def streamToString(stream: InputStream) = Source.fromInputStream(stream).mkString
     def makeRequest(request: Request) = Await.result(Gateway.getResponse(request, streamToString), 
             Duration(10, TimeUnit.SECONDS))
@@ -50,8 +50,9 @@ object GatewayTest extends App
     println(response2.body)
     
     val file = new File("testData/ankka.jpg")
-    val postImage = new Request(requestUri = "http://localhost:9999/TestServer/rest/files", 
-            method = Post, body = Some(new FileBody(file, Image/"jpg")))
+    val postImage = new Request(requestUri = "http://localhost:9999/TestServer/echo", 
+            method = Post, params = Model(Vector("name" -> "ankka")), 
+            body = Some(new FileBody(file, Image/"jpg")))
     
     val response3 = makeRequest(postImage)
     
