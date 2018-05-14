@@ -25,6 +25,8 @@ import java.io.File
 object GatewayTest extends App
 {
     DataType.setup()
+    Gateway.maxConnectionsPerRoute = 10
+    Gateway.maxConnectionsTotal = 70
     
     val uri = "http://localhost:9999/TestServer/echo"
     def streamToString(stream: InputStream) = Source.fromInputStream(stream).mkString

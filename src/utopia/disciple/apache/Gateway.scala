@@ -52,6 +52,7 @@ import org.apache.http.Header
 import org.apache.http.message.BasicHeader
 import java.io.OutputStream
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
+import org.apache.http.impl.client.CloseableHttpClient
 
 
 /**
@@ -67,7 +68,11 @@ object Gateway
             BadRequest, Unauthorized, Forbidden, NotFound, MethodNotAllowed, 
             InternalServerError, NotImplemented, ServiceUnavailable);
     
-    val connectionManager = new PoolingHttpClientConnectionManager()
+    private val connectionManager = new PoolingHttpClientConnectionManager()
+    
+    private var _client: Option[CloseableHttpClient] = None
+    private def client = _client.getOrElse(HttpClients.custom().setConnectionManager(
+                connectionManager).setConnectionManagerShared(true).build())
     
     
     // COMPUTED PROPERTIES    ----------------
@@ -76,12 +81,21 @@ object Gateway
      * The maximum number of simultaneous connections to a single route
      */
     def maxConnectionsPerRoute = connectionManager.getDefaultMaxPerRoute
-    def maxConnectionsPerRoute_=(max: Int) = connectionManager.setDefaultMaxPerRoute(max)
+    def maxConnectionsPerRoute_=(max: Int) = 
+    {
+        connectionManager.setDefaultMaxPerRoute(max)
+        invalidateClient()
+    }
     /**
      * The maximum number of simultaneous connections in total
      */
     def maxConnectionsTotal = connectionManager.getMaxTotal
-    def maxConnectionsTotal_=(max: Int) = connectionManager.setMaxTotal(max)
+    def maxConnectionsTotal_=(max: Int) = 
+    {
+        connectionManager.setMaxTotal(max)
+        invalidateClient()
+    }
+    
     
     // OTHER METHODS    ----------------------
     
@@ -96,9 +110,6 @@ object Gateway
      */
     def makeRequest(request: Request, consumeResponse: Try[StreamedResponse] => Unit) = 
     {
-        //val client = HttpClients.createDefault()
-        val client = HttpClients.custom().setConnectionManager(
-                connectionManager).setConnectionManagerShared(true).build()
         try
         {
             // Makes the base request (uri + params + body)
@@ -123,11 +134,6 @@ object Gateway
         {
             case e: Exception => consumeResponse(Failure(e))
         }
-        finally
-        {
-            // Response and client are always closed
-            client.close()
-        }
     }
     
     /**
@@ -150,6 +156,12 @@ object Gateway
         val response = Promise[BufferedResponse[Option[T]]]()
         makeAsyncRequest(request, result => response.complete(result.map(_.buffered(parseResponse))))
         response.future
+    }
+    
+    private def invalidateClient() = 
+    {
+        _client.foreach(_.close())
+        _client = None
     }
     
     // Adds parameters and body to the request base. No headers are added at this point
