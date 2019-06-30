@@ -16,19 +16,7 @@ import utopia.disciple.http.Request
 import org.apache.http.client.methods.CloseableHttpResponse
 import utopia.disciple.http.StreamedResponse
 import utopia.access.http.Status
-import utopia.access.http.OK
-import utopia.access.http.Created
-import utopia.access.http.Accepted
-import utopia.access.http.NoContent
-import utopia.access.http.NotModified
-import utopia.access.http.BadRequest
-import utopia.access.http.Unauthorized
-import utopia.access.http.Forbidden
-import utopia.access.http.NotFound
-import utopia.access.http.MethodNotAllowed
-import utopia.access.http.InternalServerError
-import utopia.access.http.NotImplemented
-import utopia.access.http.ServiceUnavailable
+import utopia.access.http.Status._
 import utopia.access.http.Headers
 import scala.util.Try
 import scala.util.Success
@@ -36,9 +24,7 @@ import scala.util.Failure
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import java.io.InputStream
-import utopia.disciple.http.BufferedResponse
 import scala.concurrent.Promise
-import utopia.disciple.http.BufferedResponse
 import utopia.disciple.http.BufferedResponse
 import utopia.flow.datastructure.immutable.Model
 import utopia.flow.datastructure.immutable.Constant
@@ -48,7 +34,6 @@ import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.HttpEntity
 import org.apache.http.client.utils.URIBuilder
 import utopia.disciple.http.Body
-import org.apache.http.Header
 import org.apache.http.message.BasicHeader
 import java.io.OutputStream
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
@@ -66,7 +51,7 @@ object Gateway
     
     private val _introducedStatuses = Vector[Status](OK, Created, Accepted, NoContent, NotModified, 
             BadRequest, Unauthorized, Forbidden, NotFound, MethodNotAllowed, 
-            InternalServerError, NotImplemented, ServiceUnavailable);
+            InternalServerError, NotImplemented, ServiceUnavailable)
     
     private val connectionManager = new PoolingHttpClientConnectionManager()
     
@@ -113,8 +98,7 @@ object Gateway
         try
         {
             // Makes the base request (uri + params + body)
-            val base = makeRequestBase(request.method, request.requestUri, request.params, 
-                    request.body);
+            val base = makeRequestBase(request.method, request.requestUri, request.params, request.body)
             
             // Adds the headers
             request.headers.fields.foreach {case (key, value) => base.addHeader(key, value)}
@@ -143,7 +127,7 @@ object Gateway
      * @param consumeResponse the function that handles the server response (or the lack of it)
      */
     def makeAsyncRequest(request: Request, consumeResponse: Try[StreamedResponse] => Unit)
-            (implicit context: ExecutionContext) = Future(makeRequest(request, consumeResponse));
+            (implicit context: ExecutionContext) = Future(makeRequest(request, consumeResponse))
     
     /**
      * Performs a request and buffers / parses it to the program memory
@@ -213,13 +197,13 @@ object Gateway
 	private def wrapResponse(response: CloseableHttpResponse) = 
 	{
 	    val status = statusForCode(response.getStatusLine.getStatusCode)
-	    val headers = new Headers(response.getAllHeaders.map(h => (h.getName(), h.getValue())).toMap)
+	    val headers = new Headers(response.getAllHeaders.map(h => (h.getName, h.getValue)).toMap)
 	    
 	    new StreamedResponse(status, headers, () => response.getEntity.getContent)
 	}
 	
 	private def statusForCode(code: Int) = _introducedStatuses.find(
-	        _.code == code).getOrElse(new Status("Other", code));
+	        _.code == code).getOrElse(new Status("Other", code))
 	
 	
 	// IMPLICIT CASTS    ------------------------
@@ -227,9 +211,10 @@ object Gateway
 	private implicit def convertOption[T](option: Option[T])
 	        (implicit f: T => HttpEntity): Option[HttpEntity] = option.map(f)
 	
+	//noinspection JavaAccessorMethodOverriddenAsEmptyParen
 	private implicit class EntityBody(val b: Body) extends HttpEntity
 	{
-	    def consumeContent() = 
+		override def consumeContent() =
 	    {
 	        b.stream.foreach(input => 
 	        {
@@ -240,22 +225,20 @@ object Gateway
 	        })
 	    }
 	    
-        def getContent() = b.stream.getOrElse(null)
+        override def getContent() = b.stream.getOrElse(null)
         
-        def getContentEncoding() = b.contentEncoding.map(
-                new BasicHeader("Content-Encoding", _)).getOrElse(null);
-        
-        def getContentLength() = b.contentLength.getOrElse(-1)
-        
-        def getContentType() = new BasicHeader("Content-Type", 
-                b.contentType.toString() + b.charset.map(_.name()).getOrElse(""))
-        
-        def isChunked() = b.chunked
-        
-        def isRepeatable() = b.repeatable
-        
-        def isStreaming() = !b.repeatable
-        
-        def writeTo(output: OutputStream) = b.writeTo(output).get
+        override def getContentEncoding() = b.contentEncoding.map(new BasicHeader("Content-Encoding", _)).orNull
+		
+		override def getContentLength() = b.contentLength.getOrElse(-1)
+		
+		override def getContentType() = new BasicHeader("Content-Type", b.contentType.toString() + b.charset.map(_.name()).getOrElse(""))
+		
+		override def isChunked() = b.chunked
+		
+		override def isRepeatable() = b.repeatable
+		
+		override def isStreaming() = !b.repeatable
+		
+		override def writeTo(output: OutputStream) = b.writeTo(output).get
 	}
 }

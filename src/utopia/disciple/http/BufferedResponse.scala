@@ -2,7 +2,6 @@ package utopia.disciple.http
 
 import utopia.access.http.Status
 import utopia.access.http.Headers
-import utopia.access.http.Cookie
 
 /**
 * A buffered response is a response that has its body parsed and buffered into program memory

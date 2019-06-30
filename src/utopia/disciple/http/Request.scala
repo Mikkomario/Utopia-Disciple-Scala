@@ -33,13 +33,12 @@ class Request(val requestUri: String, val method: Method = Get,
     /**
      * Adds a new parameter to this request
      */
-    def +(parameter: Tuple2[String, Value]): Request = this + new Constant(parameter._1, parameter._2)
+    def +(parameter: (String, Value)): Request = this + new Constant(parameter._1, parameter._2)
     
     /**
      * Adds multiple new parameters to this request
      */
-    def ++(params: template.Model[Constant]) = new Request(requestUri, method, 
-            this.params ++ params, headers, body)
+    def ++(params: template.Model[Constant]) = new Request(requestUri, method, this.params ++ params, headers, body)
     
     
     // OTHER METHODS    ----------------
@@ -47,6 +46,5 @@ class Request(val requestUri: String, val method: Method = Get,
     /**
      * Modifies the headers of this request
      */
-    def withModifiedHeaders(mod: Headers => Headers) = new Request(requestUri, method, params, 
-            mod(headers), body)
+    def withModifiedHeaders(mod: Headers => Headers) = new Request(requestUri, method, params, mod(headers), body)
 }
