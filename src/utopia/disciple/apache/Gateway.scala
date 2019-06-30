@@ -5,7 +5,6 @@ import utopia.access.http.Method._
 
 import scala.language.implicitConversions
 import scala.language.postfixOps
-
 import utopia.access.http.Method
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
@@ -18,12 +17,14 @@ import utopia.disciple.http.StreamedResponse
 import utopia.access.http.Status
 import utopia.access.http.Status._
 import utopia.access.http.Headers
+
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import java.io.InputStream
+
 import scala.concurrent.Promise
 import utopia.disciple.http.BufferedResponse
 import utopia.flow.datastructure.immutable.Model
@@ -36,8 +37,11 @@ import org.apache.http.client.utils.URIBuilder
 import utopia.disciple.http.Body
 import org.apache.http.message.BasicHeader
 import java.io.OutputStream
+
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.client.CloseableHttpClient
+
+import scala.io.Source
 
 
 /**
@@ -135,12 +139,21 @@ object Gateway
      * @param parseResponse the function that parses the response stream contents
      * @return A future that holds the request results
      */
-    def getResponse[T](request: Request, parseResponse: InputStream => T)(implicit context: ExecutionContext) = 
+    def getResponse[A](request: Request, parseResponse: InputStream => A)(implicit context: ExecutionContext) =
     {
-        val response = Promise[BufferedResponse[Option[T]]]()
+        val response = Promise[BufferedResponse[Option[A]]]()
         makeAsyncRequest(request, result => response.complete(result.map(_.buffered(parseResponse))))
         response.future
     }
+	
+	/**
+	  * Performs an asynchronous request and parses the response to program memory as string
+	  * @param request The request sent to the server
+	  * @param context An implicit execution context
+	  * @return A future for the parsed response
+	  */
+	def getStringResponse(request: Request)(implicit context: ExecutionContext) =
+		getResponse(request, stream => Source.fromInputStream(stream).mkString)
     
     private def invalidateClient() = 
     {
