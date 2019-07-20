@@ -6,13 +6,9 @@ import utopia.access.http.Method._
 import scala.language.implicitConversions
 import scala.language.postfixOps
 import utopia.access.http.Method
-import org.apache.http.client.methods.HttpGet
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.client.methods.HttpDelete
-import org.apache.http.client.methods.HttpPut
+import org.apache.http.client.methods.{CloseableHttpResponse, HttpDelete, HttpGet, HttpPatch, HttpPost, HttpPut}
 import org.apache.http.impl.client.HttpClients
 import utopia.disciple.http.Request
-import org.apache.http.client.methods.CloseableHttpResponse
 import utopia.disciple.http.StreamedResponse
 import utopia.access.http.Status
 import utopia.access.http.Status._
@@ -203,7 +199,12 @@ object Gateway
 	    else if (body.isEmpty && supportBodyParameters)
 	    {
 	        // If there is no body, adds the parameters as a body entity instead
-	        val base = if (method == Post) new HttpPost(baseUri) else new HttpPut(baseUri)
+	        val base =
+			{
+				if (method == Post) new HttpPost(baseUri)
+				else if (method == Put) new HttpPut(baseUri)
+				else new HttpPatch(baseUri)
+			}
 	        makeParametersEntity(params).foreach(base.setEntity)
 	        base
 	    }
