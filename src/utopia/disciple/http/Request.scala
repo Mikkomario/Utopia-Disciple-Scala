@@ -6,9 +6,6 @@ import utopia.access.http.Method._
 import utopia.flow.datastructure.immutable.Model
 import utopia.flow.datastructure.immutable.Constant
 import utopia.access.http.Headers
-import java.io.File
-import scala.collection.immutable.HashMap
-import scala.collection.immutable.Map
 import utopia.flow.datastructure.immutable.Value
 
 // See https://hc.apache.org/httpcomponents-client-ga/
@@ -18,10 +15,17 @@ import utopia.flow.datastructure.immutable.Value
  * over a http connection
  * @author Mikko Hilpinen
  * @since 26.11.2017
+  * @param requestUri Targeted uri / url
+  * @param method Http method used (default = GET)
+  * @param params Parameters included in request (model format, default = empty)
+  * @param headers Headers sent with the request (default = current date headers)
+  * @param body Body included in request (default = None)
+  * @param supportsBodyParameters Whether parameters could be moved to request body when body is omitted (default = true).
+  *                               Use false if you wish to force parameters to uri parameters)
  */
-class Request(val requestUri: String, val method: Method = Get, 
-        val params: Model[Constant] = Model(Vector()), 
-        val headers: Headers = Headers.currentDateHeaders, val body: Option[Body] = None)
+class Request(val requestUri: String, val method: Method = Get, val params: Model[Constant] = Model.empty,
+              val headers: Headers = Headers.currentDateHeaders, val body: Option[Body] = None,
+              val supportsBodyParameters: Boolean = true)
 {
     // OPERATORS    --------------------
     
@@ -33,7 +37,7 @@ class Request(val requestUri: String, val method: Method = Get,
     /**
      * Adds a new parameter to this request
      */
-    def +(parameter: (String, Value)): Request = this + new Constant(parameter._1, parameter._2)
+    def +(parameter: (String, Value)): Request = this + Constant(parameter._1, parameter._2)
     
     /**
      * Adds multiple new parameters to this request

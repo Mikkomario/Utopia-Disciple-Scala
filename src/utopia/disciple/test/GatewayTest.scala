@@ -4,15 +4,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import utopia.flow.generic.ValueConversions._
 import utopia.access.http.ContentCategory._
 
+import utopia.flow.util.TimeExtensions._
+import utopia.flow.async.AsyncExtensions._
 import utopia.flow.generic.DataType
 import utopia.disciple.http.Request
 import utopia.access.http.Method._
-import java.io.InputStream
-import scala.io.Source
 import utopia.disciple.apache.Gateway
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
 import utopia.flow.datastructure.immutable.Model
 import utopia.disciple.http.FileBody
 import java.io.File
@@ -29,9 +26,7 @@ object GatewayTest extends App
     Gateway.maxConnectionsTotal = 70
     
     val uri = "http://localhost:9999/TestServer/echo"
-    def streamToString(stream: InputStream) = Source.fromInputStream(stream).mkString
-    def makeRequest(request: Request) = Await.result(Gateway.getResponse(request, streamToString), 
-            Duration(10, TimeUnit.SECONDS))
+    def makeRequest(request: Request) = Gateway.getStringResponse(request).waitFor(10.seconds).get
     
     val get1 = new Request(uri, Get)
     

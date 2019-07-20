@@ -26,6 +26,7 @@ import scala.concurrent.Future
 import java.io.InputStream
 
 import scala.concurrent.Promise
+import utopia.flow.util.AutoClose._
 import utopia.disciple.http.BufferedResponse
 import utopia.flow.datastructure.immutable.Model
 import utopia.flow.datastructure.immutable.Constant
@@ -40,6 +41,7 @@ import java.io.OutputStream
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.client.CloseableHttpClient
+import utopia.flow.parse.{JSONReader, XmlReader}
 
 import scala.io.Source
 
@@ -97,26 +99,19 @@ object Gateway
      * @param request the request that is sent to the server
      * @param consumeResponse the function that handles the server response (or the lack of it)
      */
-    def makeRequest(request: Request, consumeResponse: Try[StreamedResponse] => Unit) = 
+    def makeRequest(request: Request)(consumeResponse: Try[StreamedResponse] => Unit) =
     {
         try
         {
             // Makes the base request (uri + params + body)
-            val base = makeRequestBase(request.method, request.requestUri, request.params, request.body)
+            val base = makeRequestBase(request.method, request.requestUri, request.params, request.body,
+				request.supportsBodyParameters)
             
             // Adds the headers
-            request.headers.fields.foreach {case (key, value) => base.addHeader(key, value)}
+            request.headers.fields.foreach { case (key, value) => base.addHeader(key, value) }
             
             // Performs the request and consumes any response
-            val response = client.execute(base)
-            try
-            {
-                consumeResponse(Success(wrapResponse(response)))
-            }
-            finally
-            {
-                response.close()
-            }
+			client.execute(base).consume { response => consumeResponse(Success(wrapResponse(response))) }
         }
         catch
         {
@@ -125,26 +120,41 @@ object Gateway
     }
     
     /**
-     * Performs an asynchronous request over a HTTP connection, calling the provided function 
+     * Performs an asynchronous request over a http(s) connection, calling the provided function
      * when a response is received
      * @param request the request that is sent to the server
      * @param consumeResponse the function that handles the server response (or the lack of it)
      */
-    def makeAsyncRequest(request: Request, consumeResponse: Try[StreamedResponse] => Unit)
-            (implicit context: ExecutionContext) = Future(makeRequest(request, consumeResponse))
+    def makeAsyncRequest(request: Request)(consumeResponse: Try[StreamedResponse] => Unit)
+            (implicit context: ExecutionContext): Unit = Future(makeRequest(request)(consumeResponse))
     
     /**
      * Performs a request and buffers / parses it to the program memory
      * @param request the request that is sent to the server
      * @param parseResponse the function that parses the response stream contents
-     * @return A future that holds the request results
+     * @return A future that holds the request results. Please note that the Future is a failure if no data was received.
      */
-    def getResponse[A](request: Request, parseResponse: InputStream => A)(implicit context: ExecutionContext) =
+    def getResponse[A](request: Request)(parseResponse: InputStream => Try[A])(implicit context: ExecutionContext) =
     {
-        val response = Promise[BufferedResponse[Option[A]]]()
-        makeAsyncRequest(request, result => response.complete(result.map(_.buffered(parseResponse))))
+        val response = Promise[BufferedResponse[Try[A]]]()
+        makeAsyncRequest(request)(result => response.complete(result.map { _.buffered(parseResponse) }))
         response.future
     }
+	
+	/**
+	  * Performs a request and buffers / parses it to the program memory
+	  * @param request the request that is sent to the server
+	  * @param contentOnEmptyResponse The content that replaces empty result contents
+	  * @param parseResponse the function that parses the response stream contents
+	  * @return A future that holds the request results. Please note that the Future is a failure if no data was received.
+	  */
+	def getResponse[A](request: Request, contentOnEmptyResponse: => A)(parseResponse: InputStream => Try[A])
+					  (implicit context: ExecutionContext) =
+	{
+		val response = Promise[BufferedResponse[Try[A]]]()
+		makeAsyncRequest(request)(result => response.complete(result.map { _.bufferedOr(contentOnEmptyResponse)(parseResponse) }))
+		response.future
+	}
 	
 	/**
 	  * Performs an asynchronous request and parses the response to program memory as string
@@ -153,7 +163,26 @@ object Gateway
 	  * @return A future for the parsed response
 	  */
 	def getStringResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, stream => Source.fromInputStream(stream).mkString)
+		getResponse(request, "") { stream =>
+			Try(Source.fromInputStream(stream).consume { _.getLines.mkString }) }
+	
+	/**
+	  * Performs an asynchronous request and parses the response from JSON
+	  * @param request Request sent to the server
+	  * @param context Implicit execution context
+	  * @return A future for the parsed response
+	  */
+	def getJSONResponse(request: Request)(implicit context: ExecutionContext) =
+		getResponse(request, Model.empty) { stream => JSONReader.parseStream(stream) }
+	
+	/**
+	  * Performs an asynchronous request and parses the response to Xml
+	  * @param request Request sent to the server
+	  * @param context Implicit execution context
+	  * @return A future for the parsed response
+	  */
+	def getXmlResponse(request: Request)(implicit context: ExecutionContext) =
+		getResponse(request) { stream => XmlReader.parseStream(stream) }
     
     private def invalidateClient() = 
     {
@@ -163,7 +192,7 @@ object Gateway
     
     // Adds parameters and body to the request base. No headers are added at this point
 	private def makeRequestBase(method: Method, baseUri: String, params: Model[Constant] = Model.empty, 
-	        body: Option[HttpEntity] = None) = 
+	        body: Option[HttpEntity] = None, supportBodyParameters: Boolean = true) =
 	{
 	    if (method == Get || method == Delete)
 	    {
@@ -171,7 +200,7 @@ object Gateway
 	        val uri = makeUriWithParams(baseUri, params)
 	        if (method == Get) new HttpGet(uri) else new HttpDelete(uri)
 	    }
-	    else if (body.isEmpty)
+	    else if (body.isEmpty && supportBodyParameters)
 	    {
 	        // If there is no body, adds the parameters as a body entity instead
 	        val base = if (method == Post) new HttpPost(baseUri) else new HttpPut(baseUri)

@@ -1,9 +1,11 @@
 package utopia.disciple.http
 
+import utopia.flow.util.AutoClose._
 import utopia.access.http.Status
 import utopia.access.http.Headers
 import java.io.InputStream
-import utopia.access.http.Cookie
+
+import scala.util.{Failure, Success, Try}
 
 /**
  * Streamed Responses are Responses that have a limited lifespan and can be consumed once only
@@ -22,52 +24,45 @@ class StreamedResponse(override val status: Status, override val headers: Header
     
     /**
      * Consumes this response by reading the response body
-     * @param reader the function that is used for parsing the response body
-     * @throws IllegalStateException if the response has already been consumed
+     * @param reader the function that is used for parsing the response body. May Fail.
+      * @return Reader result. Failure if reader threw and exception or if this response was already consumed or empty.
      */
-    @throws[IllegalStateException]("If this Response has already been consumed")
-    def consume[T](reader: InputStream => T) = 
+    def consume[A](reader: InputStream => Try[A]) =
     {
         if (closed)
-            throw new IllegalStateException("Response is already consumed")
+            Failure(new IllegalStateException("Response is already consumed"))
+        else if (isEmpty)
+            Failure(new NoContentException("Response is empty"))
         else
         {
             closed = true
-            val stream = openStream()
-            try
-            {
-                reader(stream)
-            }
-            finally
-            {
-                stream.close()
-            }
+            openStream().consume(reader)
         }
     }
     
     /**
      * Consumes this response by reading the response body, but only if the response contains a body
-     * @param reader the function that is used for parsing the response body
-     * @throws IllegalStateException if the response has already been consumed
+     * @param reader the function that is used for parsing the response body. May throw.
+      * @return Parsed response data. None if response was empty. Failure if response was already consumed or if parsing
+      *         function threw an exception.
      */
-    @throws[IllegalStateException]("If this Response has already been consumed")
-    def consumeIfDefined[T](reader: InputStream => T) = if (isEmpty) None else Some(consume(reader));
+    def consumeIfDefined[A](reader: InputStream => Try[A]) = if (isEmpty) None else Some(consume(reader))
     
     /**
      * Buffers this response into program memory, parsing the response contents as well
      * @param parser the function that is used for parsing the response contents
-     * @throws IllegalStateException if the response has already been consumed
+      * @return A buffered (parsed) version of this response. Contains a failure if this response was empty or
+      *         already consumed.
      */
-    @throws[IllegalStateException]("If this Response has already been consumed")
-    def buffered[T](parser: InputStream => T) = new BufferedResponse(consumeIfDefined(parser), 
-            status, headers/*, cookies*/)
+    def buffered[A](parser: InputStream => Try[A]) = new BufferedResponse(consume(parser), status, headers/*, cookies*/)
     
     /**
-     * Buffers this response into program memory, parsing the response contents as well
-     * @param parser the function that is used for parsing the response contents
-     * @throws IllegalStateException if the response has already been consumed
-     */
-    @throws[IllegalStateException]("If this Response has already been consumed")
-    def bufferedAndFlattened[T](parser: InputStream => Option[T]) = new BufferedResponse(
-            consumeIfDefined(parser).flatten, status, headers)
+      * Buffers this response into program memory, parsing the response contents
+      * @param empty Content that will be used when response is empty
+      * @param parser Response content parser. May fail.
+      * @tparam A Type of returned content
+      * @return Buffered response
+      */
+    def bufferedOr[A](empty: => A)(parser: InputStream => Try[A]) = new BufferedResponse(
+        consumeIfDefined(parser).getOrElse(Success(empty)), status, headers)
 }

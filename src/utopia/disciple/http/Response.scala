@@ -1,10 +1,7 @@
 package utopia.disciple.http
 
-import scala.collection.immutable.Set
-
 import utopia.access.http.Status
 import utopia.access.http.Headers
-import utopia.access.http.Cookie
 
 /**
 * Responses are sent by a server. Responses have a specific status and may contain a body 
