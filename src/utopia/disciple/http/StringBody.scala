@@ -42,4 +42,6 @@ class StringBody(s: String, cset: Charset, val contentType: ContentType) extends
 	def contentEncoding = None
 	
 	def stream = Success(new ByteArrayInputStream(bytes))
+	
+	override def toString = s"$s ($contentType)"
 }

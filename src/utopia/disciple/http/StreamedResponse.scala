@@ -20,6 +20,11 @@ class StreamedResponse(override val status: Status, override val headers: Header
     private var closed = false
     
     
+    // IMPLEMENTED  -------------------------
+    
+    override def toString = s"$status: Stream(...). Headers: $headers"
+    
+    
     // OTHER METHODS    ----------------------
     
     /**

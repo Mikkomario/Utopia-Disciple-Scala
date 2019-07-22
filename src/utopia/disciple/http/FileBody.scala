@@ -19,4 +19,6 @@ class FileBody(val file: File, val contentType: ContentType, val charset: Option
 	
     override def contentLength = Some(file.length())
     override def stream = Try(new FileInputStream(file))
+	
+	override def toString = s"${file.getName} ($contentType)"
 }

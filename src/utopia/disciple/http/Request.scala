@@ -27,6 +27,11 @@ class Request(val requestUri: String, val method: Method = Get, val params: Mode
               val headers: Headers = Headers.currentDateHeaders, val body: Option[Body] = None,
               val supportsBodyParameters: Boolean = true)
 {
+    // IMPLEMENTED  --------------------
+    
+    override def toString = s"$method $requestUri Parameters: $params, Body: $body, Headers: $headers"
+    
+    
     // OPERATORS    --------------------
     
     /**
