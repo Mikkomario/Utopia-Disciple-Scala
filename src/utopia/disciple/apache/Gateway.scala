@@ -24,8 +24,7 @@ import java.io.InputStream
 import scala.concurrent.Promise
 import utopia.flow.util.AutoClose._
 import utopia.disciple.http.BufferedResponse
-import utopia.flow.datastructure.immutable.Model
-import utopia.flow.datastructure.immutable.Constant
+import utopia.flow.datastructure.immutable.{Constant, Model, Value}
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.Consts
 import org.apache.http.client.entity.UrlEncodedFormEntity
@@ -169,7 +168,7 @@ object Gateway
 	  * @return A future for the parsed response
 	  */
 	def getJSONResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, Model.empty) { stream => JSONReader.parseStream(stream) }
+		getResponse(request, Value.empty()) { stream => JSONReader(stream) }
 	
 	/**
 	  * Performs an asynchronous request and parses the response to Xml
