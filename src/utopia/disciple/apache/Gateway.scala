@@ -57,6 +57,7 @@ object Gateway
     
     private val connectionManager = new PoolingHttpClientConnectionManager()
     
+	// TODO: Add customizable timeouts (see https://www.baeldung.com/httpclient-timeout)
     private var _client: Option[CloseableHttpClient] = None
     private def client = _client.getOrElse(HttpClients.custom().setConnectionManager(
                 connectionManager).setConnectionManagerShared(true).build())

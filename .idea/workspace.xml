@@ -6,15 +6,9 @@
     </artifacts-to-build>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="83df1551-3db4-477c-a000-8072a9b88914" name="Default Changelist" comment="Access: Added authorization support to headers&#10;Disciple: Fixed errors caused by access changes">
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="83df1551-3db4-477c-a000-8072a9b88914" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utopia/disciple/apache/Gateway.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/utopia/disciple/apache/Gateway.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utopia/disciple/http/BufferedResponse.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/utopia/disciple/http/BufferedResponse.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utopia/disciple/http/Response.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/utopia/disciple/http/Response.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Utopia-Flow-Scala/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../Utopia-Flow-Scala/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -34,11 +28,6 @@
   </component>
   <component name="ProjectCodeStyleSettingsMigration">
     <option name="version" value="1" />
-  </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-12" />
-    <option name="width" value="2442" />
-    <option name="height" value="2112" />
   </component>
   <component name="ProjectId" id="1OUqGEcV7r039sQVMSVw8xuwq5G" />
   <component name="ProjectLevelVcsManager">
@@ -87,7 +76,13 @@
       <option name="project" value="LOCAL" />
       <updated>1563867017824</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL−00003" summary="Disciple: Fixed errors from Flow side and added some getResponse options to Gateway">
+      <created>1564044035837</created>
+      <option name="number" value="LOCAL−00003" />
+      <option name="presentableId" value="LOCAL−00003" />
+      <updated>1564044035837</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -95,7 +90,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>
@@ -104,7 +101,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Access: Added authorization support to headers&#10;Disciple: Fixed errors caused by access changes" />
     <MESSAGE value="Created a new artifact" />
-    <option name="LAST_COMMIT_MESSAGE" value="Created a new artifact" />
+    <MESSAGE value="Disciple: Fixed errors from Flow side and added some getResponse options to Gateway" />
+    <option name="LAST_COMMIT_MESSAGE" value="Disciple: Fixed errors from Flow side and added some getResponse options to Gateway" />
   </component>
   <component name="masterDetails">
     <states>
