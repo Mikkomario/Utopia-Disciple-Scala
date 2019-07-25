@@ -1,7 +1,6 @@
 package utopia.disciple.http
 
-import utopia.access.http.Status
-import utopia.access.http.Headers
+import utopia.access.http.{Headers, Status, StatusGroup}
 
 /**
 * Responses are sent by a server. Responses have a specific status and may contain a body 
@@ -30,6 +29,11 @@ trait Response
     
     
     // COMPUTED PROPERTIES    ---------------
+    
+    /**
+     * @return Whether this response has a success (2XX) status
+     */
+    def isSuccess = status.group == StatusGroup.Success
     
     /**
      * The content type of the response

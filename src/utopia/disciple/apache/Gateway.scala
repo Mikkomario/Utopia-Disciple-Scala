@@ -36,6 +36,7 @@ import java.io.OutputStream
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.client.CloseableHttpClient
+import utopia.flow.generic.ModelType
 import utopia.flow.parse.{JSONReader, XmlReader}
 
 import scala.io.Source
@@ -132,9 +133,34 @@ object Gateway
     def getResponse[A](request: Request)(parseResponse: InputStream => Try[A])(implicit context: ExecutionContext) =
     {
         val response = Promise[BufferedResponse[Try[A]]]()
-        makeAsyncRequest(request)(result => response.complete(result.map { _.buffered(parseResponse) }))
+        makeAsyncRequest(request) { result => response.complete(result.map { _.buffered(parseResponse) }) }
         response.future
     }
+	
+	/**
+	 * Performs a request and buffers / parses it to the program memory
+	 * @param request the request that is sent to the server
+	 * @param parseSuccess A function for parsing response contents on a success (2XX) response
+	 * @param parseFailure A function for parsing response contents on a failure / error response
+	 * @return A future that holds the request results. Please note that the Future is a failure if no data was received.
+	 */
+	def getSuccessOrFailureResponse[S, F](request: Request)(parseSuccess: InputStream => Try[S])
+										 (parseFailure: InputStream => Try[F])(implicit context: ExecutionContext) =
+	{
+		val response = Promise[Either[BufferedResponse[Try[F]], BufferedResponse[Try[S]]]]()
+		makeAsyncRequest(request) { result =>
+			
+			val buffered = result.map { response =>
+				if (response.isSuccess)
+					Right(response.buffered(parseSuccess))
+				else
+					Left(response.buffered(parseFailure))
+			}
+			
+			response.complete(buffered)
+		}
+		response.future
+	}
 	
 	/**
 	  * Performs a request and buffers / parses it to the program memory
@@ -168,7 +194,42 @@ object Gateway
 	  * @return A future for the parsed response
 	  */
 	def getJSONResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, Value.empty()) { stream => JSONReader(stream) }
+		getResponse(request, Value.empty) { stream => JSONReader(stream) }
+	
+	/**
+	 * Performs an asynchronous request and parses the response from JSON to a model. Expects response contents to
+	 * be a json object.
+	 * @param request Request set to server
+	 * @param context Implicit execution context
+	 * @return A future for the parsed response
+	 */
+	def getJSONModelResponse(request: Request)(implicit context: ExecutionContext) =
+		getResponse(request, Model.empty) { stream => JSONReader(stream).map { _.getModel } }
+	
+	/**
+	 * Performs an asynchronous request and parses the response from JSON to a vector. Expects response contents
+	 * to be a json array.
+	 * @param request Request set to server
+	 * @param context Implicit execution context
+	 * @return A future for the parsed response
+	 */
+	def getJSONVectorResponse(request: Request)(implicit context: ExecutionContext) =
+		getResponse(request, Vector[Value]()) { stream => JSONReader(stream).map { _.getVector } }
+	
+	/**
+	 * Performs an asynchronous request and parses the response from JSON to a number of models. Expects response contents
+	 * to be a json array filled with json objects.
+	 * @param request Request set to server
+	 * @param context Implicit execution context
+	 * @return A future for the parsed response
+	 */
+	def getJSONMultiModelResponse(request: Request)(implicit context: ExecutionContext) =
+		getResponse(request, Vector[Model[Constant]]()) { stream => JSONReader(stream).map { value =>
+			if (value.isOfType(ModelType))
+				Vector(value.getModel)
+			else
+				value.getVector.flatMap { _.model }
+		}}
 	
 	/**
 	  * Performs an asynchronous request and parses the response to Xml

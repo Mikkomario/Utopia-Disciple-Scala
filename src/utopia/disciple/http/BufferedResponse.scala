@@ -16,6 +16,8 @@ import scala.util.{Failure, Success}
 class BufferedResponse[+A](val body: A, override val status: Status, override val headers: Headers,
         /*override val cookies: Set[Cookie]*/) extends Response
 {
+	// IMPLEMENTED	-------------------
+	
 	override def toString =
 	{
 		val bodyString = body match
@@ -25,4 +27,15 @@ class BufferedResponse[+A](val body: A, override val status: Status, override va
 		}
 		s"$status: $bodyString. Headers: $headers"
 	}
+	
+	
+	// OTHER	-----------------------
+	
+	/**
+	 * Maps the contents of this response body
+	 * @param f A mapping function
+	 * @tparam B Resulting body type
+	 * @return A response with mapped body
+	 */
+	def map[B](f: A => B) = new BufferedResponse(f(body), status, headers)
 }
