@@ -6,9 +6,9 @@
     </artifacts-to-build>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="83df1551-3db4-477c-a000-8072a9b88914" name="Default Changelist" comment="">
+    <list default="true" id="83df1551-3db4-477c-a000-8072a9b88914" name="Default Changelist" comment="Updated some getResponse methods in Gateway">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utopia/disciple/apache/Gateway.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/utopia/disciple/apache/Gateway.scala" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -82,7 +82,13 @@
       <option name="presentableId" value="LOCAL−00003" />
       <updated>1564044035837</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL−00004" summary="Updated some getResponse methods in Gateway">
+      <created>1564064502326</created>
+      <option name="number" value="LOCAL−00004" />
+      <option name="presentableId" value="LOCAL−00004" />
+      <updated>1564064502326</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -102,7 +108,8 @@
     <MESSAGE value="Access: Added authorization support to headers&#10;Disciple: Fixed errors caused by access changes" />
     <MESSAGE value="Created a new artifact" />
     <MESSAGE value="Disciple: Fixed errors from Flow side and added some getResponse options to Gateway" />
-    <option name="LAST_COMMIT_MESSAGE" value="Disciple: Fixed errors from Flow side and added some getResponse options to Gateway" />
+    <MESSAGE value="Updated some getResponse methods in Gateway" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated some getResponse methods in Gateway" />
   </component>
   <component name="masterDetails">
     <states>
