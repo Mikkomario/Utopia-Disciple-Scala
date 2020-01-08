@@ -33,13 +33,14 @@ import org.apache.http.client.utils.URIBuilder
 import utopia.disciple.http.Body
 import org.apache.http.message.BasicHeader
 import java.io.OutputStream
+import java.net.URLEncoder
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.client.CloseableHttpClient
 import utopia.flow.generic.ModelType
 import utopia.flow.parse.{JSONReader, XmlReader}
 
-import scala.io.Source
+import scala.io.{Codec, Source}
 
 
 /**
@@ -102,7 +103,7 @@ object Gateway
         {
             // Makes the base request (uri + params + body)
             val base = makeRequestBase(request.method, request.requestUri, request.params, request.body,
-				request.supportsBodyParameters)
+				request.supportsBodyParameters, request.parameterEncoding)
             
             // Adds the headers
             request.headers.fields.foreach { case (key, value) => base.addHeader(key, value) }
@@ -248,13 +249,13 @@ object Gateway
     }
     
     // Adds parameters and body to the request base. No headers are added at this point
-	private def makeRequestBase(method: Method, baseUri: String, params: Model[Constant] = Model.empty, 
-	        body: Option[HttpEntity] = None, supportBodyParameters: Boolean = true) =
+	private def makeRequestBase(method: Method, baseUri: String, params: Model[Constant] = Model.empty,
+	        body: Option[HttpEntity], supportBodyParameters: Boolean, parameterEncoding: Option[Codec]) =
 	{
 	    if (method == Get || method == Delete)
 	    {
 	        // Adds the parameters to uri, no body is supported
-	        val uri = makeUriWithParams(baseUri, params)
+	        val uri = makeUriWithParams(baseUri, params, parameterEncoding)
 	        if (method == Get) new HttpGet(uri) else new HttpDelete(uri)
 	    }
 	    else if (body.isEmpty && supportBodyParameters)
@@ -272,7 +273,7 @@ object Gateway
 	    else
 	    {
 	        // If both a body and parameters were provided, adds params to uri
-	        val uri = makeUriWithParams(baseUri, params)
+	        val uri = makeUriWithParams(baseUri, params, parameterEncoding)
 	        val base = if (method == Post) new HttpPost(uri) else new HttpPut(uri)
 	        base.setEntity(body.get)
 	        base
@@ -280,11 +281,22 @@ object Gateway
 	}
 	
 	// Adds parameter values in JSON format to request uri, returns combined uri
-	private def makeUriWithParams(baseUri: String, params: Model[Constant]) = 
+	private def makeUriWithParams(baseUri: String, params: Model[Constant], encoding: Option[Codec]) =
 	{
 	    val builder = new URIBuilder(baseUri)
-	    params.attributes.foreach(a => builder.addParameter(a.name, a.value.toJSON))
+		// May encode parameter values
+	    params.attributes.foreach { a => builder.addParameter(a.name, paramValue(a.value, encoding)) }
 	    builder.build()
+	}
+	
+	private def paramValue(originalValue: Value, encoding: Option[Codec]) =
+	{
+		val valueString = originalValue.toJSON
+		encoding match
+		{
+			case Some(codec) => URLEncoder.encode(valueString, codec.charSet.name())
+			case None => valueString
+		}
 	}
 	
 	private def makeParametersEntity(params: Model[Constant]) = 
