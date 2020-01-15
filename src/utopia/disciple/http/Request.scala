@@ -8,6 +8,9 @@ import utopia.flow.datastructure.immutable.Constant
 import utopia.access.http.Headers
 import utopia.flow.datastructure.immutable.Value
 
+import scala.collection.immutable.VectorBuilder
+import scala.io.Codec
+
 // See https://hc.apache.org/httpcomponents-client-ga/
 
 /**
@@ -22,14 +25,32 @@ import utopia.flow.datastructure.immutable.Value
   * @param body Body included in request (default = None)
   * @param supportsBodyParameters Whether parameters could be moved to request body when body is omitted (default = true).
   *                               Use false if you wish to force parameters to uri parameters)
+ *  @param parameterEncoding Encoding option used for query (uri) parameters. None if no encoding should be used (default)
  */
 class Request(val requestUri: String, val method: Method = Get, val params: Model[Constant] = Model.empty,
               val headers: Headers = Headers.currentDateHeaders, val body: Option[Body] = None,
-              val supportsBodyParameters: Boolean = true)
+              val supportsBodyParameters: Boolean = true, val parameterEncoding: Option[Codec] = None)
 {
     // IMPLEMENTED  --------------------
     
-    override def toString = s"$method $requestUri Parameters: $params, Body: $body, Headers: $headers"
+    override def toString =
+    {
+        val result = new StringBuilder
+        result ++= s"$method $requestUri"
+        val extra = new VectorBuilder[String]
+        if (params.nonEmpty)
+            extra += s"Parameters: $params"
+        if (body.nonEmpty)
+            extra += s"sBody: $body"
+        if (headers.fields.nonEmpty)
+            extra += s"Headers: $headers"
+        
+        val endStrings = extra.result()
+        if (endStrings.nonEmpty)
+            result ++= s"(${endStrings.mkString(", ")})"
+        
+        result.result()
+    }
     
     
     // OPERATORS    --------------------
