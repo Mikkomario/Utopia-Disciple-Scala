@@ -34,6 +34,7 @@ import utopia.disciple.http.Body
 import org.apache.http.message.BasicHeader
 import java.io.OutputStream
 import java.net.URLEncoder
+import java.nio.charset.Charset
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.impl.client.CloseableHttpClient
@@ -62,7 +63,13 @@ object Gateway
     private var _client: Option[CloseableHttpClient] = None
     private def client = _client.getOrElse(HttpClients.custom().setConnectionManager(
                 connectionManager).setConnectionManagerShared(true).build())
-    
+	
+	/**
+	 * Default character encoding used when parsing response data (used when no character encoding is specified in
+	 * response headers)
+	 */
+	var defaultResponseEncoding = Codec.UTF8
+	
     
     // COMPUTED PROPERTIES    ----------------
     
@@ -132,7 +139,7 @@ object Gateway
      * @param parseResponse the function that parses the response stream contents
      * @return A future that holds the request results. Please note that the Future is a failure if no data was received.
      */
-    def getResponse[A](request: Request)(parseResponse: InputStream => Try[A])(implicit context: ExecutionContext) =
+    def getResponse[A](request: Request)(parseResponse: (InputStream, Headers) => Try[A])(implicit context: ExecutionContext) =
     {
         val response = Promise[BufferedResponse[Try[A]]]()
         makeAsyncRequest(request) { result => response.complete(result.map { _.buffered(parseResponse) }) }
@@ -146,8 +153,8 @@ object Gateway
 	 * @param parseFailure A function for parsing response contents on a failure / error response
 	 * @return A future that holds the request results. Please note that the Future is a failure if no data was received.
 	 */
-	def getSuccessOrFailureResponse[S, F](request: Request)(parseSuccess: InputStream => Try[S])
-										 (parseFailure: InputStream => Try[F])(implicit context: ExecutionContext) =
+	def getSuccessOrFailureResponse[S, F](request: Request)(parseSuccess: (InputStream, Headers) => Try[S])
+										 (parseFailure: (InputStream, Headers) => Try[F])(implicit context: ExecutionContext) =
 	{
 		val response = Promise[Either[BufferedResponse[Try[F]], BufferedResponse[Try[S]]]]()
 		makeAsyncRequest(request) { result =>
@@ -171,7 +178,7 @@ object Gateway
 	  * @param parseResponse the function that parses the response stream contents
 	  * @return A future that holds the request results. Please note that the Future is a failure if no data was received.
 	  */
-	def getResponse[A](request: Request, contentOnEmptyResponse: => A)(parseResponse: InputStream => Try[A])
+	def getResponse[A](request: Request, contentOnEmptyResponse: => A)(parseResponse: (InputStream, Headers) => Try[A])
 					  (implicit context: ExecutionContext) =
 	{
 		val response = Promise[BufferedResponse[Try[A]]]()
@@ -186,8 +193,16 @@ object Gateway
 	  * @return A future for the parsed response
 	  */
 	def getStringResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, "") { stream =>
-			Try(Source.fromInputStream(stream).consume { _.getLines.mkString }) }
+		getResponse(request, "")(stringFromResponse)
+	
+	/**
+	 * A parsing function that reads response contents as a string
+	 * @param stream Response body stream
+	 * @param headers Response body headers
+	 * @return Parsed string. May contain failure.
+	 */
+	def stringFromResponse(stream: InputStream, headers: Headers) = Try {
+		Source.fromInputStream(stream)(headers.codec.getOrElse(defaultResponseEncoding)).consume { _.getLines.mkString } }
 	
 	/**
 	  * Performs an asynchronous request and parses the response from JSON
@@ -196,7 +211,16 @@ object Gateway
 	  * @return A future for the parsed response
 	  */
 	def getJSONResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, Value.empty) { stream => JSONReader(stream) }
+		getResponse(request, Value.empty)(jsonFromResponse)
+	
+	/**
+	 * A parsing function that reads response into a json value
+	 * @param stream Response body stream
+	 * @param headers Response body headers
+	 * @return Parsed json value
+	 */
+	def jsonFromResponse(stream: InputStream, headers: Headers) = JSONReader(stream,
+		headers.codec.getOrElse(defaultResponseEncoding))
 	
 	/**
 	 * Performs an asynchronous request and parses the response from JSON to a model. Expects response contents to
@@ -206,7 +230,15 @@ object Gateway
 	 * @return A future for the parsed response
 	 */
 	def getJSONModelResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, Model.empty) { stream => JSONReader(stream).map { _.getModel } }
+		getResponse(request, Model.empty)(jsonModelFromResponse)
+	
+	/**
+	 * A parsing function tha reads response body into a json model
+	 * @param stream Response body stream
+	 * @param headers Response body headers
+	 * @return Parsed json model
+	 */
+	def jsonModelFromResponse(stream: InputStream, headers: Headers) = jsonFromResponse(stream, headers).map { _.getModel }
 	
 	/**
 	 * Performs an asynchronous request and parses the response from JSON to a vector. Expects response contents
@@ -216,7 +248,15 @@ object Gateway
 	 * @return A future for the parsed response
 	 */
 	def getJSONVectorResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, Vector[Value]()) { stream => JSONReader(stream).map { _.getVector } }
+		getResponse(request, Vector[Value]())(jsonVectorFromResponse)
+	
+	/**
+	 * A parsing function that reads response body into a list of json values
+	 * @param stream Response body stream
+	 * @param headers Response body headers
+	 * @return Parsed values
+	 */
+	def jsonVectorFromResponse(stream: InputStream, headers: Headers) = jsonFromResponse(stream, headers).map { _.getVector }
 	
 	/**
 	 * Performs an asynchronous request and parses the response from JSON to a number of models. Expects response contents
@@ -226,12 +266,20 @@ object Gateway
 	 * @return A future for the parsed response
 	 */
 	def getJSONMultiModelResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request, Vector[Model[Constant]]()) { stream => JSONReader(stream).map { value =>
-			if (value.isOfType(ModelType))
-				Vector(value.getModel)
-			else
-				value.getVector.flatMap { _.model }
-		}}
+		getResponse(request, Vector[Model[Constant]]())(multipleJsonModelsFromResponse)
+	
+	/**
+	 * A parsing function that reads one or more models from response (expects json model or json array format)
+	 * @param stream Response body stream
+	 * @param headers Response body headers
+	 * @return Parsed model(s)
+	 */
+	def multipleJsonModelsFromResponse(stream: InputStream, headers: Headers) = jsonFromResponse(stream, headers).map { v =>
+		if (v.isOfType(ModelType))
+			Vector(v.getModel)
+		else
+			v.getVector.flatMap { _.model }
+	}
 	
 	/**
 	  * Performs an asynchronous request and parses the response to Xml
@@ -240,8 +288,17 @@ object Gateway
 	  * @return A future for the parsed response
 	  */
 	def getXmlResponse(request: Request)(implicit context: ExecutionContext) =
-		getResponse(request) { stream => XmlReader.parseStream(stream) }
-    
+		getResponse(request)(xmlFromResponse)
+	
+	/**
+	 * A parsing function that reads response body into an xml element
+	 * @param stream Response body stream
+	 * @param headers Response body headers
+	 * @return Parsed xml element
+	 */
+	def xmlFromResponse(stream: InputStream, headers: Headers) = XmlReader.parseStream(stream,
+		headers.charset.getOrElse(Charset.forName("UTF-8")))
+	
     private def invalidateClient() = 
     {
         _client.foreach(_.close())

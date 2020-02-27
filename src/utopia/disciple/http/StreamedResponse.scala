@@ -32,7 +32,7 @@ class StreamedResponse(override val status: Status, override val headers: Header
      * @param reader the function that is used for parsing the response body. May Fail.
       * @return Reader result. Failure if reader threw and exception or if this response was already consumed or empty.
      */
-    def consume[A](reader: InputStream => Try[A]) =
+    def consume[A](reader: (InputStream, Headers) => Try[A]) =
     {
         if (closed)
             Failure(new IllegalStateException("Response is already consumed"))
@@ -41,7 +41,7 @@ class StreamedResponse(override val status: Status, override val headers: Header
         else
         {
             closed = true
-            openStream().consume(reader)
+            openStream().consume { reader(_, headers) }
         }
     }
     
@@ -51,7 +51,7 @@ class StreamedResponse(override val status: Status, override val headers: Header
       * @return Parsed response data. None if response was empty. Failure if response was already consumed or if parsing
       *         function threw an exception.
      */
-    def consumeIfDefined[A](reader: InputStream => Try[A]) = if (isEmpty) None else Some(consume(reader))
+    def consumeIfDefined[A](reader: (InputStream, Headers) => Try[A]) = if (isEmpty) None else Some(consume(reader))
     
     /**
      * Buffers this response into program memory, parsing the response contents as well
@@ -59,7 +59,7 @@ class StreamedResponse(override val status: Status, override val headers: Header
       * @return A buffered (parsed) version of this response. Contains a failure if this response was empty or
       *         already consumed.
      */
-    def buffered[A](parser: InputStream => Try[A]) = new BufferedResponse(consume(parser), status, headers/*, cookies*/)
+    def buffered[A](parser: (InputStream, Headers) => Try[A]) = new BufferedResponse(consume(parser), status, headers/*, cookies*/)
     
     /**
       * Buffers this response into program memory, parsing the response contents
@@ -68,6 +68,6 @@ class StreamedResponse(override val status: Status, override val headers: Header
       * @tparam A Type of returned content
       * @return Buffered response
       */
-    def bufferedOr[A](empty: => A)(parser: InputStream => Try[A]) = new BufferedResponse(
+    def bufferedOr[A](empty: => A)(parser: (InputStream, Headers) => Try[A]) = new BufferedResponse(
         consumeIfDefined(parser).getOrElse(Success(empty)), status, headers)
 }
