@@ -389,13 +389,10 @@ object Gateway
 	{
 		override def consumeContent() =
 	    {
-	        b.stream.foreach(input => 
-	        {
+	        b.stream.foreach { input =>
     	        val bytes = new Array[Byte](1024) //1024 bytes - Buffer size
-                Iterator
-                .continually (input.read(bytes))
-                .takeWhile (-1 !=)
-	        })
+                Iterator.continually (input.read(bytes)).takeWhile (-1 !=).foreach { _ => }
+	        }
 	    }
 	    
         override def getContent() = b.stream.getOrElse(null)
